@@ -1,6 +1,5 @@
 # Consulta CNPJ Investigativa
-
-Aplicação React + Tailwind para consulta de CNPJ pela API pública CNPJ.ws.
+Aplicação React + Tailwind para consulta de CNPJ pela API pública.
 
 ## Rodar no computador
 
@@ -27,4 +26,4 @@ https://SEU-USUARIO.github.io/consulta-cnpj/
 
 ## Observação
 
-Não coloque dados de investigações, relatórios, nomes de investigados ou informações sensíveis dentro deste repositório. O código apenas consulta a API no navegador.
+Não coloque informações sensíveis dentro deste repositório. O código apenas consulta a API no navegador.
