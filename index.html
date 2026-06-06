@@ -13,6 +13,7 @@
         const originalFetch = window.fetch.bind(window);
         const CNPJWS_HOST = "publica.cnpj.ws/cnpj/";
         const BRASILAPI_BASE = "https://brasilapi.com.br/api/cnpj/v1/";
+        const MINHA_RECEITA_BASE = "https://minhareceita.org/";
 
         function onlyDigits(value) {
           return String(value || "").replace(/\D/g, "");
@@ -22,7 +23,7 @@
           return values.find((value) => value !== undefined && value !== null && String(value).trim() !== "") || "";
         }
 
-        function normalizeBrasilApiSocio(socio) {
+        function normalizePublicQsaSocio(socio, origemDado) {
           if (!socio || typeof socio !== "object") return null;
 
           const nome = pick(socio.nome_socio, socio.nome, socio.razao_social, socio.nome_razao_social);
@@ -40,7 +41,11 @@
             ),
             tipo: pick(socio.tipo, socio.tipo_socio, socio.identificador_de_socio, socio.identificador_socio),
             data_entrada: pick(socio.data_entrada_sociedade, socio.data_entrada, socio.data_inicio),
-            cpf_representante_legal: pick(socio.cpf_representante_legal, socio.cpf_representante, socio.cnpj_cpf_do_representante_legal),
+            cpf_representante_legal: pick(
+              socio.cpf_representante_legal,
+              socio.cpf_representante,
+              socio.cnpj_cpf_do_representante_legal
+            ),
             nome_representante: pick(socio.nome_representante_legal, socio.nome_representante),
             faixa_etaria: pick(socio.faixa_etaria, socio.faixa_etaria_socio),
             qualificacao_socio: {
@@ -57,11 +62,11 @@
               socio.qualificacao_representante_legal,
               socio.codigo_qualificacao_representante_legal
             ),
-            origem_dado: "BrasilAPI",
+            origem_dado: origemDado,
           };
         }
 
-        function mergeSocios(existingSocios, extraSocios) {
+        function mergeSocios(...listas) {
           const merged = [];
           const seen = new Set();
 
@@ -70,22 +75,25 @@
             const nome = String(socio.nome || socio.nome_socio || "").trim();
             if (!nome) return;
 
-            const documento = onlyDigits(
+            const documento = String(
               socio.cpf_cnpj_socio ||
               socio.cnpj_cpf_socio ||
               socio.cnpj_cpf_do_socio ||
               socio.documento ||
               ""
-            );
+            ).trim();
             const qualificacao = String(socio.qualificacao_socio?.descricao || socio.qual || socio.qualificacao || "").trim();
-            const key = `${nome.toUpperCase()}|${documento}|${qualificacao.toUpperCase()}`;
+            const entrada = String(socio.data_entrada || socio.data_entrada_sociedade || "").trim();
+            const key = `${nome.toUpperCase()}|${documento}|${qualificacao.toUpperCase()}|${entrada}`;
             if (seen.has(key)) return;
             seen.add(key);
             merged.push({ ...socio, origem_dado: socio.origem_dado || origem });
           }
 
-          (Array.isArray(existingSocios) ? existingSocios : []).forEach((socio) => add(socio, "CNPJ.ws"));
-          (Array.isArray(extraSocios) ? extraSocios : []).forEach((socio) => add(socio, "BrasilAPI"));
+          listas.forEach(({ socios, origem }) => {
+            (Array.isArray(socios) ? socios : []).forEach((socio) => add(socio, origem));
+          });
+
           return merged;
         }
 
@@ -102,12 +110,34 @@
 
             const raw = await response.json().catch(() => null);
             const qsa = Array.isArray(raw?.qsa)
-              ? raw.qsa.map(normalizeBrasilApiSocio).filter(Boolean)
+              ? raw.qsa.map((socio) => normalizePublicQsaSocio(socio, "BrasilAPI")).filter(Boolean)
               : [];
 
             return { qsa, error: null, raw };
           } catch (error) {
             return { qsa: [], error: error?.message || "Não foi possível consultar a BrasilAPI.", raw: null };
+          }
+        }
+
+        async function consultarMinhaReceitaQsa(cleanCnpj) {
+          try {
+            const response = await originalFetch(`${MINHA_RECEITA_BASE}${cleanCnpj}`, {
+              method: "GET",
+              headers: { Accept: "application/json" },
+            });
+
+            if (!response.ok) {
+              return { qsa: [], error: `Minha Receita retornou HTTP ${response.status}.`, raw: null };
+            }
+
+            const raw = await response.json().catch(() => null);
+            const qsa = Array.isArray(raw?.qsa)
+              ? raw.qsa.map((socio) => normalizePublicQsaSocio(socio, "Minha Receita")).filter(Boolean)
+              : [];
+
+            return { qsa, error: null, raw };
+          } catch (error) {
+            return { qsa: [], error: error?.message || "Não foi possível consultar a Minha Receita.", raw: null };
           }
         }
 
@@ -130,14 +160,23 @@
             return response;
           }
 
-          const brasilApi = await consultarBrasilApiQsa(cleanCnpj);
+          const [brasilApi, minhaReceita] = await Promise.all([
+            consultarBrasilApiQsa(cleanCnpj),
+            consultarMinhaReceitaQsa(cleanCnpj),
+          ]);
+
           const sociosOriginais = Array.isArray(baseData.socios) ? baseData.socios : [];
-          const sociosComFallback = mergeSocios(sociosOriginais, brasilApi.qsa);
+          const sociosComFallback = mergeSocios(
+            { socios: sociosOriginais, origem: "CNPJ.ws" },
+            { socios: brasilApi.qsa, origem: "BrasilAPI" },
+            { socios: minhaReceita.qsa, origem: "Minha Receita" }
+          );
 
           const mergedData = {
             ...baseData,
             socios: sociosComFallback,
             qsa_brasilapi: brasilApi.qsa,
+            qsa_minha_receita: minhaReceita.qsa,
             fontes_preprocessadas: {
               ...(baseData.fontes_preprocessadas || {}),
               brasilapi: {
@@ -146,6 +185,13 @@
                 erro: brasilApi.error,
                 total_qsa: brasilApi.qsa.length,
                 dados: brasilApi.raw,
+              },
+              minha_receita: {
+                consultado: true,
+                sucesso: minhaReceita.error === null,
+                erro: minhaReceita.error,
+                total_qsa: minhaReceita.qsa.length,
+                dados: minhaReceita.raw,
               },
             },
           };
