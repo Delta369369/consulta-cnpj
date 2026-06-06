@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 
 const API_BASE = "https://publica.cnpj.ws/cnpj";
+const RECEITAWS_API_BASE = "https://www.receitaws.com.br/v1/cnpj";
 
 function onlyDigits(value) {
   return String(value || "").replace(/\D/g, "");
@@ -259,10 +260,74 @@ function normalizeSocioDocument(socio) {
   return value || "-";
 }
 
+function normalizeReceitaWsSocio(socio) {
+  if (!socio || typeof socio !== "object") return null;
+
+  return {
+    nome: socio.nome || socio.nome_socio || "",
+    cpf_cnpj_socio: socio.cpf_cnpj_socio || socio.cnpj_cpf_socio || socio.cpf || socio.cnpj || "",
+    tipo: socio.tipo || "",
+    data_entrada: socio.data_entrada || "",
+    cpf_representante_legal: socio.cpf_representante_legal || socio.cpf_rep_legal || "",
+    nome_representante: socio.nome_representante || socio.nome_rep_legal || "",
+    faixa_etaria: socio.faixa_etaria || "",
+    qualificacao_socio: {
+      descricao: socio.qual || socio.qualificacao_socio?.descricao || socio.qualificacao || "",
+    },
+    qualificacao_representante: socio.qual_rep_legal || socio.qualificacao_representante || "",
+    origem_dado: "ReceitaWS",
+  };
+}
+
+function mergeSocios(cnpjWsSocios = [], receitaWsQsa = []) {
+  const merged = [];
+  const seen = new Set();
+
+  function addSocio(socio, fallbackSource) {
+    if (!socio || typeof socio !== "object") return;
+    const normalized = { ...socio, origem_dado: socio.origem_dado || fallbackSource };
+    const key = `${String(normalized.nome || "").trim().toUpperCase()}|${String(normalized.qualificacao_socio?.descricao || normalized.qual || "").trim().toUpperCase()}`;
+    if (!String(normalized.nome || "").trim()) return;
+    if (seen.has(key)) return;
+    seen.add(key);
+    merged.push(normalized);
+  }
+
+  (Array.isArray(cnpjWsSocios) ? cnpjWsSocios : []).forEach((socio) => addSocio(socio, "CNPJ.ws"));
+  (Array.isArray(receitaWsQsa) ? receitaWsQsa : []).forEach((socio) => addSocio(socio, "ReceitaWS"));
+
+  return merged;
+}
+
+async function consultarReceitaWs(cleanCnpj) {
+  try {
+    const response = await fetch(`${RECEITAWS_API_BASE}/${cleanCnpj}`, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+    });
+
+    const responseData = await response.json().catch(() => null);
+
+    if (!response.ok || responseData?.status === "ERROR") {
+      return {
+        data: null,
+        error: responseData?.message || responseData?.mensagem || `ReceitaWS retornou HTTP ${response.status}.`,
+      };
+    }
+
+    return { data: responseData, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error: err?.message || "Não foi possível consultar a ReceitaWS.",
+    };
+  }
+}
+
 function buildInvestigativeFlags(data) {
   if (!data) return [];
   const estabelecimento = data.estabelecimento || {};
-  const socios = data.socios || [];
+  const socios = data.socios_consolidados || data.socios || [];
   const inscricoes = estabelecimento.inscricoes_estaduais || [];
   const flags = [];
 
@@ -271,7 +336,7 @@ function buildInvestigativeFlags(data) {
   }
   if (!estabelecimento.email) flags.push("E-mail não retornado pela base pública.");
   if (!estabelecimento.telefone1 && !estabelecimento.telefone2) flags.push("Telefone não retornado pela base pública.");
-  if (socios.length === 0) flags.push("QSA/sócios não retornados pela base pública.");
+  if (socios.length === 0) flags.push("QSA/sócios não retornados pelas fontes públicas consultadas.");
   if (socios.some((socio) => String(socio.tipo || "").toLowerCase().includes("jur"))) {
     flags.push("Há pessoa jurídica no quadro societário, recomendando análise de cadeia societária.");
   }
@@ -295,7 +360,8 @@ export default function App() {
   const atividadesSecundarias = estabelecimento?.atividades_secundarias || [];
   const inscricoes = estabelecimento?.inscricoes_estaduais || [];
   const suframa = estabelecimento?.suframa || data?.suframa || [];
-  const socios = data?.socios || [];
+  const socios = data?.socios_consolidados || data?.socios || [];
+  const receitaWsInfo = data?.fontes_adicionais?.receitaws || null;
   const simples = data?.simples || {};
   const fullCnpj = estabelecimento?.cnpj || (data?.cnpj_raiz ? `${data.cnpj_raiz}${estabelecimento?.ordem || ""}${estabelecimento?.digito_verificador || ""}` : "");
 
@@ -346,7 +412,32 @@ export default function App() {
         throw new Error(responseData?.detalhes || responseData?.message || "Erro ao consultar o CNPJ.");
       }
 
-      setData(responseData);
+      const sociosCnpjWs = Array.isArray(responseData?.socios) ? responseData.socios : [];
+      const receitaWsResult = await consultarReceitaWs(cleanCnpj);
+      const qsaReceitaWs = Array.isArray(receitaWsResult.data?.qsa)
+        ? receitaWsResult.data.qsa.map(normalizeReceitaWsSocio).filter(Boolean)
+        : [];
+      const sociosConsolidados = mergeSocios(sociosCnpjWs, qsaReceitaWs);
+
+      setData({
+        ...responseData,
+        socios_consolidados: sociosConsolidados,
+        qsa_receitaws: qsaReceitaWs,
+        fontes_adicionais: {
+          cnpjws: {
+            consultado: true,
+            sucesso: true,
+            total_qsa: sociosCnpjWs.length,
+          },
+          receitaws: {
+            consultado: true,
+            sucesso: Boolean(receitaWsResult.data),
+            erro: receitaWsResult.error,
+            total_qsa: qsaReceitaWs.length,
+            dados: receitaWsResult.data,
+          },
+        },
+      });
     } catch (err) {
       setError(err.message || "Falha inesperada na consulta.");
     } finally {
@@ -380,10 +471,10 @@ export default function App() {
           <header className="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 px-6 py-8 text-white md:px-10">
             <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
               <div>
-                <p className="text-sm font-bold uppercase tracking-[0.25em] text-cyan-300">Consulta pública CNPJ.ws</p>
+                <p className="text-sm font-bold uppercase tracking-[0.25em] text-cyan-300">Consulta pública CNPJ.ws + ReceitaWS</p>
                 <h1 className="mt-3 text-3xl font-black tracking-tight md:text-5xl">Consulta CNPJ Investigativa</h1>
                 <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300 md:text-base">
-                  Consulta cadastral com resumo compacto, QSA, responsáveis, atividades, inscrições, indicadores e renderização integral do JSON retornado pela API.
+                  Consulta cadastral com resumo compacto, QSA consolidado, responsáveis, atividades, inscrições, indicadores e renderização integral dos JSONs retornados pelas fontes públicas.
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-3 text-center md:min-w-[300px]">
@@ -474,13 +565,16 @@ export default function App() {
                       { label: "Responsável federativo", value: data.responsavel_federativo || "Não informado" },
                       { label: "Qualificação do responsável", value: data.qualificacao_do_responsavel?.descricao || data.qualificacao_do_responsavel },
                       { label: "Total de sócios/QSA", value: socios.length ? String(socios.length) : "0" },
+                      { label: "QSA via CNPJ.ws", value: String(data?.fontes_adicionais?.cnpjws?.total_qsa ?? 0) },
+                      { label: "QSA via ReceitaWS", value: String(receitaWsInfo?.total_qsa ?? 0) },
+                      { label: "Status ReceitaWS", value: receitaWsInfo?.sucesso ? "Consultada com sucesso" : receitaWsInfo?.erro || "Não consultada" },
                       { label: "CNPJ raiz", value: data.cnpj_raiz },
                     ]}
                   />
 
                   <div className="mt-4">
                     <Table
-                      emptyMessage="Nenhum sócio/QSA retornado pela API pública para este CNPJ."
+                      emptyMessage="Nenhum sócio/QSA retornado pelas fontes públicas consultadas para este CNPJ."
                       rows={socios}
                       columns={[
                         { key: "nome", label: "Nome / Razão social", render: (row) => row.nome || "-" },
@@ -490,6 +584,7 @@ export default function App() {
                         { key: "data_entrada", label: "Entrada", render: (row) => formatDate(row.data_entrada) },
                         { key: "representante", label: "Representante legal", render: (row) => [row.nome_representante, smartFormatValue("cpf_representante_legal", row.cpf_representante_legal)].filter((v) => v && v !== "-").join(" - ") || "-" },
                         { key: "pais.nome", label: "País", render: (row) => row.pais?.nome || "-" },
+                        { key: "origem_dado", label: "Fonte", render: (row) => row.origem_dado || "CNPJ.ws" },
                       ]}
                     />
                   </div>
