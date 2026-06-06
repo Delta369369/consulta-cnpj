@@ -7,6 +7,161 @@
   </head>
   <body>
     <div id="root"></div>
+
+    <script>
+      (() => {
+        const originalFetch = window.fetch.bind(window);
+        const CNPJWS_HOST = "publica.cnpj.ws/cnpj/";
+        const BRASILAPI_BASE = "https://brasilapi.com.br/api/cnpj/v1/";
+
+        function onlyDigits(value) {
+          return String(value || "").replace(/\D/g, "");
+        }
+
+        function pick(...values) {
+          return values.find((value) => value !== undefined && value !== null && String(value).trim() !== "") || "";
+        }
+
+        function normalizeBrasilApiSocio(socio) {
+          if (!socio || typeof socio !== "object") return null;
+
+          const nome = pick(socio.nome_socio, socio.nome, socio.razao_social, socio.nome_razao_social);
+          if (!nome) return null;
+
+          return {
+            nome,
+            cpf_cnpj_socio: pick(
+              socio.cnpj_cpf_do_socio,
+              socio.cpf_cnpj_socio,
+              socio.cnpj_cpf_socio,
+              socio.cpf,
+              socio.cnpj,
+              socio.documento
+            ),
+            tipo: pick(socio.tipo, socio.tipo_socio, socio.identificador_de_socio, socio.identificador_socio),
+            data_entrada: pick(socio.data_entrada_sociedade, socio.data_entrada, socio.data_inicio),
+            cpf_representante_legal: pick(socio.cpf_representante_legal, socio.cpf_representante, socio.cnpj_cpf_do_representante_legal),
+            nome_representante: pick(socio.nome_representante_legal, socio.nome_representante),
+            faixa_etaria: pick(socio.faixa_etaria, socio.faixa_etaria_socio),
+            qualificacao_socio: {
+              descricao: pick(
+                socio.qualificacao_socio,
+                socio.descricao_qualificacao_socio,
+                socio.qual,
+                socio.qualificacao,
+                socio.codigo_qualificacao_socio
+              ),
+            },
+            qualificacao_representante: pick(
+              socio.qualificacao_representante,
+              socio.qualificacao_representante_legal,
+              socio.codigo_qualificacao_representante_legal
+            ),
+            origem_dado: "BrasilAPI",
+          };
+        }
+
+        function mergeSocios(existingSocios, extraSocios) {
+          const merged = [];
+          const seen = new Set();
+
+          function add(socio, origem) {
+            if (!socio || typeof socio !== "object") return;
+            const nome = String(socio.nome || socio.nome_socio || "").trim();
+            if (!nome) return;
+
+            const documento = onlyDigits(
+              socio.cpf_cnpj_socio ||
+              socio.cnpj_cpf_socio ||
+              socio.cnpj_cpf_do_socio ||
+              socio.documento ||
+              ""
+            );
+            const qualificacao = String(socio.qualificacao_socio?.descricao || socio.qual || socio.qualificacao || "").trim();
+            const key = `${nome.toUpperCase()}|${documento}|${qualificacao.toUpperCase()}`;
+            if (seen.has(key)) return;
+            seen.add(key);
+            merged.push({ ...socio, origem_dado: socio.origem_dado || origem });
+          }
+
+          (Array.isArray(existingSocios) ? existingSocios : []).forEach((socio) => add(socio, "CNPJ.ws"));
+          (Array.isArray(extraSocios) ? extraSocios : []).forEach((socio) => add(socio, "BrasilAPI"));
+          return merged;
+        }
+
+        async function consultarBrasilApiQsa(cleanCnpj) {
+          try {
+            const response = await originalFetch(`${BRASILAPI_BASE}${cleanCnpj}`, {
+              method: "GET",
+              headers: { Accept: "application/json" },
+            });
+
+            if (!response.ok) {
+              return { qsa: [], error: `BrasilAPI retornou HTTP ${response.status}.`, raw: null };
+            }
+
+            const raw = await response.json().catch(() => null);
+            const qsa = Array.isArray(raw?.qsa)
+              ? raw.qsa.map(normalizeBrasilApiSocio).filter(Boolean)
+              : [];
+
+            return { qsa, error: null, raw };
+          } catch (error) {
+            return { qsa: [], error: error?.message || "Não foi possível consultar a BrasilAPI.", raw: null };
+          }
+        }
+
+        window.fetch = async function patchedFetch(input, init) {
+          const url = typeof input === "string" ? input : input?.url || "";
+          const response = await originalFetch(input, init);
+
+          if (!url.includes(CNPJWS_HOST) || !response.ok) {
+            return response;
+          }
+
+          const cloned = response.clone();
+          const baseData = await cloned.json().catch(() => null);
+          if (!baseData || typeof baseData !== "object") {
+            return response;
+          }
+
+          const cleanCnpj = onlyDigits(url.split(CNPJWS_HOST).pop()).slice(0, 14);
+          if (cleanCnpj.length !== 14) {
+            return response;
+          }
+
+          const brasilApi = await consultarBrasilApiQsa(cleanCnpj);
+          const sociosOriginais = Array.isArray(baseData.socios) ? baseData.socios : [];
+          const sociosComFallback = mergeSocios(sociosOriginais, brasilApi.qsa);
+
+          const mergedData = {
+            ...baseData,
+            socios: sociosComFallback,
+            qsa_brasilapi: brasilApi.qsa,
+            fontes_preprocessadas: {
+              ...(baseData.fontes_preprocessadas || {}),
+              brasilapi: {
+                consultado: true,
+                sucesso: brasilApi.error === null,
+                erro: brasilApi.error,
+                total_qsa: brasilApi.qsa.length,
+                dados: brasilApi.raw,
+              },
+            },
+          };
+
+          const headers = new Headers(response.headers);
+          headers.set("content-type", "application/json; charset=utf-8");
+
+          return new Response(JSON.stringify(mergedData), {
+            status: response.status,
+            statusText: response.statusText,
+            headers,
+          });
+        };
+      })();
+    </script>
+
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
