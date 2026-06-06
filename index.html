@@ -15,54 +15,61 @@
         const CNPJA_OPEN_BASE = "https://open.cnpja.com/office/";
         const BRASILAPI_BASE = "https://brasilapi.com.br/api/cnpj/v1/";
         const MINHA_RECEITA_BASE = "https://minhareceita.org/";
+        const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
         function onlyDigits(value) {
           return String(value || "").replace(/\D/g, "");
+        }
+
+        function sleep(ms) {
+          return new Promise((resolve) => setTimeout(resolve, ms));
         }
 
         function pick(...values) {
           return values.find((value) => value !== undefined && value !== null && String(value).trim() !== "") || "";
         }
 
+        function cacheKey(source, cleanCnpj) {
+          return `osint-cnpj:qsa:${source}:${cleanCnpj}`;
+        }
+
+        function getCached(source, cleanCnpj) {
+          try {
+            const raw = localStorage.getItem(cacheKey(source, cleanCnpj));
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (!parsed?.savedAt || Date.now() - parsed.savedAt > CACHE_TTL_MS) {
+              localStorage.removeItem(cacheKey(source, cleanCnpj));
+              return null;
+            }
+            return parsed.value || null;
+          } catch {
+            return null;
+          }
+        }
+
+        function setCached(source, cleanCnpj, value) {
+          try {
+            localStorage.setItem(cacheKey(source, cleanCnpj), JSON.stringify({ savedAt: Date.now(), value }));
+          } catch {}
+        }
+
         function normalizePublicQsaSocio(socio, origemDado) {
           if (!socio || typeof socio !== "object") return null;
-
           const nome = pick(socio.nome_socio, socio.nome, socio.razao_social, socio.nome_razao_social);
           if (!nome) return null;
-
           return {
             nome,
-            cpf_cnpj_socio: pick(
-              socio.cnpj_cpf_do_socio,
-              socio.cpf_cnpj_socio,
-              socio.cnpj_cpf_socio,
-              socio.cpf,
-              socio.cnpj,
-              socio.documento
-            ),
+            cpf_cnpj_socio: pick(socio.cnpj_cpf_do_socio, socio.cpf_cnpj_socio, socio.cnpj_cpf_socio, socio.cpf, socio.cnpj, socio.documento),
             tipo: pick(socio.tipo, socio.tipo_socio, socio.identificador_de_socio, socio.identificador_socio),
             data_entrada: pick(socio.data_entrada_sociedade, socio.data_entrada, socio.data_inicio),
-            cpf_representante_legal: pick(
-              socio.cpf_representante_legal,
-              socio.cpf_representante,
-              socio.cnpj_cpf_do_representante_legal
-            ),
+            cpf_representante_legal: pick(socio.cpf_representante_legal, socio.cpf_representante, socio.cnpj_cpf_do_representante_legal),
             nome_representante: pick(socio.nome_representante_legal, socio.nome_representante),
             faixa_etaria: pick(socio.faixa_etaria, socio.faixa_etaria_socio),
             qualificacao_socio: {
-              descricao: pick(
-                socio.qualificacao_socio,
-                socio.descricao_qualificacao_socio,
-                socio.qual,
-                socio.qualificacao,
-                socio.codigo_qualificacao_socio
-              ),
+              descricao: pick(socio.qualificacao_socio, socio.descricao_qualificacao_socio, socio.qual, socio.qualificacao, socio.codigo_qualificacao_socio),
             },
-            qualificacao_representante: pick(
-              socio.qualificacao_representante,
-              socio.qualificacao_representante_legal,
-              socio.codigo_qualificacao_representante_legal
-            ),
+            qualificacao_representante: pick(socio.qualificacao_representante, socio.qualificacao_representante_legal, socio.codigo_qualificacao_representante_legal),
             origem_dado: origemDado,
           };
         }
@@ -71,30 +78,11 @@
           if (!member || typeof member !== "object") return null;
           const person = member.person || member.individual || member.company || {};
           const role = member.role || member.qualification || member.qualificacao || {};
-
-          const nome = pick(
-            member.name,
-            member.nome,
-            member.nome_socio,
-            person.name,
-            person.nome,
-            person.alias,
-            person.tradeName
-          );
+          const nome = pick(member.name, member.nome, member.nome_socio, person.name, person.nome, person.alias, person.tradeName);
           if (!nome) return null;
-
           return {
             nome,
-            cpf_cnpj_socio: pick(
-              member.taxId,
-              member.tax_id,
-              member.cpf_cnpj_socio,
-              member.cnpj_cpf_socio,
-              person.taxId,
-              person.tax_id,
-              person.cpf,
-              person.cnpj
-            ),
+            cpf_cnpj_socio: pick(member.taxId, member.tax_id, member.cpf_cnpj_socio, member.cnpj_cpf_socio, person.taxId, person.tax_id, person.cpf, person.cnpj),
             tipo: pick(member.type, member.tipo, person.type, person.tipo),
             data_entrada: pick(member.since, member.data_entrada, member.data_entrada_sociedade),
             cpf_representante_legal: pick(member.agent?.taxId, member.representative?.taxId, member.cpf_representante_legal),
@@ -109,41 +97,23 @@
         }
 
         function extractCnpjaQsa(raw) {
-          const candidates = [
-            raw?.company?.members,
-            raw?.members,
-            raw?.qsa,
-            raw?.socios,
-            raw?.company?.qsa,
-            raw?.company?.socios,
-            raw?.empresa?.socios,
-          ];
-
+          const candidates = [raw?.company?.members, raw?.members, raw?.qsa, raw?.socios, raw?.company?.qsa, raw?.company?.socios, raw?.empresa?.socios];
           for (const candidate of candidates) {
             if (Array.isArray(candidate) && candidate.length > 0) {
               return candidate.map(normalizeCnpjaMember).filter(Boolean);
             }
           }
-
           return [];
         }
 
         function mergeSocios(...listas) {
           const merged = [];
           const seen = new Set();
-
           function add(socio, origem) {
             if (!socio || typeof socio !== "object") return;
             const nome = String(socio.nome || socio.nome_socio || "").trim();
             if (!nome) return;
-
-            const documento = String(
-              socio.cpf_cnpj_socio ||
-              socio.cnpj_cpf_socio ||
-              socio.cnpj_cpf_do_socio ||
-              socio.documento ||
-              ""
-            ).trim();
+            const documento = String(socio.cpf_cnpj_socio || socio.cnpj_cpf_socio || socio.cnpj_cpf_do_socio || socio.documento || "").trim();
             const qualificacao = String(socio.qualificacao_socio?.descricao || socio.qual || socio.qualificacao || "").trim();
             const entrada = String(socio.data_entrada || socio.data_entrada_sociedade || "").trim();
             const key = `${nome.toUpperCase()}|${documento}|${qualificacao.toUpperCase()}|${entrada}`;
@@ -151,110 +121,83 @@
             seen.add(key);
             merged.push({ ...socio, origem_dado: socio.origem_dado || origem });
           }
-
           listas.forEach(({ socios, origem }) => {
             (Array.isArray(socios) ? socios : []).forEach((socio) => add(socio, origem));
           });
-
           return merged;
         }
 
-        async function consultarCnpjaOpenQsa(cleanCnpj) {
+        async function fetchJsonWithCache(source, cleanCnpj, url, parser) {
+          const cached = getCached(source, cleanCnpj);
+          if (cached) return { ...cached, cache: true };
           try {
-            const response = await originalFetch(`${CNPJA_OPEN_BASE}${cleanCnpj}`, {
-              method: "GET",
-              headers: { Accept: "application/json" },
-            });
-
-            if (!response.ok) {
-              return { qsa: [], error: `CNPJá Pública retornou HTTP ${response.status}.`, raw: null };
+            const response = await originalFetch(url, { method: "GET", headers: { Accept: "application/json" } });
+            if (response.status === 429) {
+              const result = { qsa: [], error: `${source} retornou HTTP 429: limite temporário atingido.`, raw: null };
+              setCached(source, cleanCnpj, result);
+              return result;
             }
-
+            if (!response.ok) {
+              const result = { qsa: [], error: `${source} retornou HTTP ${response.status}.`, raw: null };
+              setCached(source, cleanCnpj, result);
+              return result;
+            }
             const raw = await response.json().catch(() => null);
-            const qsa = extractCnpjaQsa(raw);
-            return { qsa, error: null, raw };
+            const result = { qsa: parser(raw), error: null, raw };
+            setCached(source, cleanCnpj, result);
+            return result;
           } catch (error) {
-            return { qsa: [], error: error?.message || "Não foi possível consultar a CNPJá Pública.", raw: null };
+            const result = { qsa: [], error: error?.message || `Não foi possível consultar ${source}.`, raw: null };
+            setCached(source, cleanCnpj, result);
+            return result;
           }
         }
 
-        async function consultarBrasilApiQsa(cleanCnpj) {
-          try {
-            const response = await originalFetch(`${BRASILAPI_BASE}${cleanCnpj}`, {
-              method: "GET",
-              headers: { Accept: "application/json" },
-            });
-
-            if (!response.ok) {
-              return { qsa: [], error: `BrasilAPI retornou HTTP ${response.status}.`, raw: null };
-            }
-
-            const raw = await response.json().catch(() => null);
-            const qsa = Array.isArray(raw?.qsa)
-              ? raw.qsa.map((socio) => normalizePublicQsaSocio(socio, "BrasilAPI")).filter(Boolean)
-              : [];
-
-            return { qsa, error: null, raw };
-          } catch (error) {
-            return { qsa: [], error: error?.message || "Não foi possível consultar a BrasilAPI.", raw: null };
-          }
+        async function consultarCnpjaOpenQsa(cleanCnpj) {
+          return fetchJsonWithCache("CNPJá Pública", cleanCnpj, `${CNPJA_OPEN_BASE}${cleanCnpj}`, (raw) => extractCnpjaQsa(raw));
         }
 
         async function consultarMinhaReceitaQsa(cleanCnpj) {
-          try {
-            const response = await originalFetch(`${MINHA_RECEITA_BASE}${cleanCnpj}`, {
-              method: "GET",
-              headers: { Accept: "application/json" },
-            });
+          return fetchJsonWithCache("Minha Receita", cleanCnpj, `${MINHA_RECEITA_BASE}${cleanCnpj}`, (raw) => Array.isArray(raw?.qsa) ? raw.qsa.map((socio) => normalizePublicQsaSocio(socio, "Minha Receita")).filter(Boolean) : []);
+        }
 
-            if (!response.ok) {
-              return { qsa: [], error: `Minha Receita retornou HTTP ${response.status}.`, raw: null };
-            }
+        async function consultarBrasilApiQsa(cleanCnpj) {
+          return fetchJsonWithCache("BrasilAPI", cleanCnpj, `${BRASILAPI_BASE}${cleanCnpj}`, (raw) => Array.isArray(raw?.qsa) ? raw.qsa.map((socio) => normalizePublicQsaSocio(socio, "BrasilAPI")).filter(Boolean) : []);
+        }
 
-            const raw = await response.json().catch(() => null);
-            const qsa = Array.isArray(raw?.qsa)
-              ? raw.qsa.map((socio) => normalizePublicQsaSocio(socio, "Minha Receita")).filter(Boolean)
-              : [];
-
-            return { qsa, error: null, raw };
-          } catch (error) {
-            return { qsa: [], error: error?.message || "Não foi possível consultar a Minha Receita.", raw: null };
-          }
+        async function consultarFallbacksComModeracao(cleanCnpj, sociosOriginais) {
+          const naoConsultada = { qsa: [], error: "Não consultada: QSA já encontrado em fonte anterior.", raw: null };
+          const fontes = { cnpjaOpen: naoConsultada, minhaReceita: naoConsultada, brasilApi: naoConsultada };
+          if (Array.isArray(sociosOriginais) && sociosOriginais.length > 0) return fontes;
+          fontes.cnpjaOpen = await consultarCnpjaOpenQsa(cleanCnpj);
+          if (fontes.cnpjaOpen.qsa.length > 0) return fontes;
+          await sleep(900);
+          fontes.minhaReceita = await consultarMinhaReceitaQsa(cleanCnpj);
+          if (fontes.minhaReceita.qsa.length > 0) return fontes;
+          await sleep(900);
+          fontes.brasilApi = await consultarBrasilApiQsa(cleanCnpj);
+          return fontes;
         }
 
         window.fetch = async function patchedFetch(input, init) {
           const url = typeof input === "string" ? input : input?.url || "";
           const response = await originalFetch(input, init);
-
-          if (!url.includes(CNPJWS_HOST) || !response.ok) {
-            return response;
-          }
-
+          if (!url.includes(CNPJWS_HOST) || !response.ok) return response;
           const cloned = response.clone();
           const baseData = await cloned.json().catch(() => null);
-          if (!baseData || typeof baseData !== "object") {
-            return response;
-          }
-
+          if (!baseData || typeof baseData !== "object") return response;
           const cleanCnpj = onlyDigits(url.split(CNPJWS_HOST).pop()).slice(0, 14);
-          if (cleanCnpj.length !== 14) {
-            return response;
-          }
-
-          const [cnpjaOpen, brasilApi, minhaReceita] = await Promise.all([
-            consultarCnpjaOpenQsa(cleanCnpj),
-            consultarBrasilApiQsa(cleanCnpj),
-            consultarMinhaReceitaQsa(cleanCnpj),
-          ]);
+          if (cleanCnpj.length !== 14) return response;
 
           const sociosOriginais = Array.isArray(baseData.socios) ? baseData.socios : [];
+          const { cnpjaOpen, minhaReceita, brasilApi } = await consultarFallbacksComModeracao(cleanCnpj, sociosOriginais);
           const sociosComFallback = mergeSocios(
             { socios: sociosOriginais, origem: "CNPJ.ws" },
             { socios: cnpjaOpen.qsa, origem: "CNPJá Pública" },
-            { socios: brasilApi.qsa, origem: "BrasilAPI" },
-            { socios: minhaReceita.qsa, origem: "Minha Receita" }
+            { socios: minhaReceita.qsa, origem: "Minha Receita" },
+            { socios: brasilApi.qsa, origem: "BrasilAPI" }
           );
-
+          const naoConsultada = "Não consultada: QSA já encontrado em fonte anterior.";
           const mergedData = {
             ...baseData,
             socios: sociosComFallback,
@@ -263,38 +206,14 @@
             qsa_minha_receita: minhaReceita.qsa,
             fontes_preprocessadas: {
               ...(baseData.fontes_preprocessadas || {}),
-              cnpja_publica: {
-                consultado: true,
-                sucesso: cnpjaOpen.error === null,
-                erro: cnpjaOpen.error,
-                total_qsa: cnpjaOpen.qsa.length,
-                dados: cnpjaOpen.raw,
-              },
-              brasilapi: {
-                consultado: true,
-                sucesso: brasilApi.error === null,
-                erro: brasilApi.error,
-                total_qsa: brasilApi.qsa.length,
-                dados: brasilApi.raw,
-              },
-              minha_receita: {
-                consultado: true,
-                sucesso: minhaReceita.error === null,
-                erro: minhaReceita.error,
-                total_qsa: minhaReceita.qsa.length,
-                dados: minhaReceita.raw,
-              },
+              cnpja_publica: { consultado: cnpjaOpen.error !== naoConsultada, sucesso: cnpjaOpen.error === null, cache: Boolean(cnpjaOpen.cache), erro: cnpjaOpen.error, total_qsa: cnpjaOpen.qsa.length, dados: cnpjaOpen.raw },
+              minha_receita: { consultado: minhaReceita.error !== naoConsultada, sucesso: minhaReceita.error === null, cache: Boolean(minhaReceita.cache), erro: minhaReceita.error, total_qsa: minhaReceita.qsa.length, dados: minhaReceita.raw },
+              brasilapi: { consultado: brasilApi.error !== naoConsultada, sucesso: brasilApi.error === null, cache: Boolean(brasilApi.cache), erro: brasilApi.error, total_qsa: brasilApi.qsa.length, dados: brasilApi.raw },
             },
           };
-
           const headers = new Headers(response.headers);
           headers.set("content-type", "application/json; charset=utf-8");
-
-          return new Response(JSON.stringify(mergedData), {
-            status: response.status,
-            statusText: response.statusText,
-            headers,
-          });
+          return new Response(JSON.stringify(mergedData), { status: response.status, statusText: response.statusText, headers });
         };
       })();
     </script>
