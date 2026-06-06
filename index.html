@@ -3,10 +3,37 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Consulta CNPJ Investigativa</title>
+    <title>OSINT – CNPJ</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      (() => {
+        const replacements = new Map([
+          ["Consulta pública CNPJ.ws + ReceitaWS", "OSINT – CNPJ"],
+          ["Consulta CNPJ Investigativa", "Ferramenta para auxiliar profissionais da Lei que não possuem suporte adequado."],
+          [
+            "Consulta cadastral com resumo compacto, QSA consolidado, responsáveis, atividades, inscrições, indicadores e renderização integral dos JSONs retornados pelas fontes públicas.",
+            "Não seja um investigador que não investiga."
+          ],
+        ]);
+
+        function replaceHeaderText() {
+          document.querySelectorAll("p, h1").forEach((element) => {
+            const currentText = element.textContent.trim();
+            if (replacements.has(currentText)) {
+              element.textContent = replacements.get(currentText);
+            }
+          });
+        }
+
+        const root = document.getElementById("root");
+        const observer = new MutationObserver(replaceHeaderText);
+        observer.observe(root, { childList: true, subtree: true });
+        window.addEventListener("load", replaceHeaderText);
+        setTimeout(replaceHeaderText, 100);
+      })();
+    </script>
   </body>
 </html>
