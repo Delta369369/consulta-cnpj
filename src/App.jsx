@@ -209,15 +209,34 @@ function Table({ columns, rows, emptyMessage }) {
   );
 }
 
+function getDynamicGridClass(level) {
+  if (level === 0) return "grid gap-3 md:grid-cols-2 xl:grid-cols-3";
+  if (level === 1) return "grid gap-3 sm:grid-cols-2 xl:grid-cols-3";
+  return "grid gap-2 sm:grid-cols-2";
+}
+
+function getDynamicCardClass({ complex, level, entryCount }) {
+  const shouldExpand = complex && (level <= 1 || entryCount > 6);
+  const span = shouldExpand ? "md:col-span-2 xl:col-span-3" : "";
+  const padding = complex ? "p-4" : "p-3";
+  const background = complex ? "bg-slate-50" : "bg-white";
+  return `rounded-xl border border-slate-200 ${background} ${padding} ${span}`;
+}
+
 function DataRenderer({ data, name = "dados", level = 0 }) {
   if (data === null || data === undefined || data === "") return <span className="text-slate-400">-</span>;
 
   if (Array.isArray(data)) {
     if (data.length === 0) return <span className="text-slate-400">Lista vazia</span>;
+
+    const itemGrid = data.length === 1
+      ? "grid gap-3"
+      : "grid gap-3 md:grid-cols-2 xl:grid-cols-3";
+
     return (
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className={itemGrid}>
         {data.map((item, index) => (
-          <div key={`${name}-${index}`} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <div key={`${name}-${index}`} className="rounded-xl border border-slate-200 bg-white p-3">
             <div className="mb-2 text-xs font-black uppercase tracking-wide text-slate-500">Item {index + 1}</div>
             <DataRenderer data={item} name={`${name}-${index}`} level={level + 1} />
           </div>
@@ -231,16 +250,18 @@ function DataRenderer({ data, name = "dados", level = 0 }) {
     if (entries.length === 0) return <span className="text-slate-400">Objeto vazio</span>;
 
     return (
-      <div className={`grid gap-3 ${level === 0 ? "md:grid-cols-2 xl:grid-cols-3" : ""}`}>
+      <div className={getDynamicGridClass(level)}>
         {entries.map(([key, value]) => {
           const complex = value && typeof value === "object";
+          const childCount = complex && !Array.isArray(value) ? Object.keys(value).length : Array.isArray(value) ? value.length : 0;
+
           return (
-            <div key={`${name}-${key}`} className="rounded-xl border border-slate-200 bg-white p-3">
-              <div className="mb-1 text-xs font-black uppercase tracking-wide text-slate-500">{humanizeKey(key)}</div>
+            <div key={`${name}-${key}`} className={getDynamicCardClass({ complex, level, entryCount: childCount })}>
+              <div className="mb-2 text-xs font-black uppercase tracking-wide text-slate-500">{humanizeKey(key)}</div>
               {complex ? (
                 <DataRenderer data={value} name={key} level={level + 1} />
               ) : (
-                <div className="break-words text-sm font-semibold text-slate-800">{smartFormatValue(key, value)}</div>
+                <div className="break-words text-sm font-semibold leading-5 text-slate-800">{smartFormatValue(key, value)}</div>
               )}
             </div>
           );
