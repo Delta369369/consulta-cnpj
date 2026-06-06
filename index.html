@@ -30,7 +30,7 @@
         }
 
         function cacheKey(source, cleanCnpj) {
-          return `osint-cnpj:qsa:${source}:${cleanCnpj}`;
+          return `osint-cnpj:v2:qsa:${source}:${cleanCnpj}`;
         }
 
         function getCached(source, cleanCnpj) {
@@ -54,13 +54,37 @@
           } catch {}
         }
 
+        function extractDocumentoSocio(socio = {}, pessoa = {}) {
+          return pick(
+            socio.cpf_cnpj_socio,
+            socio.cnpj_cpf_socio,
+            socio.cnpj_cpf_do_socio,
+            socio.cpf,
+            socio.cnpj,
+            socio.documento,
+            socio.documento_socio,
+            socio.numero_documento,
+            socio.taxId,
+            socio.tax_id,
+            socio.maskedTaxId,
+            socio.masked_tax_id,
+            pessoa.taxId,
+            pessoa.tax_id,
+            pessoa.cpf,
+            pessoa.cnpj,
+            pessoa.documento,
+            pessoa.maskedTaxId,
+            pessoa.masked_tax_id
+          );
+        }
+
         function normalizePublicQsaSocio(socio, origemDado) {
           if (!socio || typeof socio !== "object") return null;
           const nome = pick(socio.nome_socio, socio.nome, socio.razao_social, socio.nome_razao_social);
           if (!nome) return null;
           return {
             nome,
-            cpf_cnpj_socio: pick(socio.cnpj_cpf_do_socio, socio.cpf_cnpj_socio, socio.cnpj_cpf_socio, socio.cpf, socio.cnpj, socio.documento),
+            cpf_cnpj_socio: extractDocumentoSocio(socio),
             tipo: pick(socio.tipo, socio.tipo_socio, socio.identificador_de_socio, socio.identificador_socio),
             data_entrada: pick(socio.data_entrada_sociedade, socio.data_entrada, socio.data_inicio),
             cpf_representante_legal: pick(socio.cpf_representante_legal, socio.cpf_representante, socio.cnpj_cpf_do_representante_legal),
@@ -82,7 +106,7 @@
           if (!nome) return null;
           return {
             nome,
-            cpf_cnpj_socio: pick(member.taxId, member.tax_id, member.cpf_cnpj_socio, member.cnpj_cpf_socio, person.taxId, person.tax_id, person.cpf, person.cnpj),
+            cpf_cnpj_socio: extractDocumentoSocio(member, person),
             tipo: pick(member.type, member.tipo, person.type, person.tipo),
             data_entrada: pick(member.since, member.data_entrada, member.data_entrada_sociedade),
             cpf_representante_legal: pick(member.agent?.taxId, member.representative?.taxId, member.cpf_representante_legal),
@@ -113,13 +137,13 @@
             if (!socio || typeof socio !== "object") return;
             const nome = String(socio.nome || socio.nome_socio || "").trim();
             if (!nome) return;
-            const documento = String(socio.cpf_cnpj_socio || socio.cnpj_cpf_socio || socio.cnpj_cpf_do_socio || socio.documento || "").trim();
+            const documento = String(extractDocumentoSocio(socio)).trim();
             const qualificacao = String(socio.qualificacao_socio?.descricao || socio.qual || socio.qualificacao || "").trim();
             const entrada = String(socio.data_entrada || socio.data_entrada_sociedade || "").trim();
             const key = `${nome.toUpperCase()}|${documento}|${qualificacao.toUpperCase()}|${entrada}`;
             if (seen.has(key)) return;
             seen.add(key);
-            merged.push({ ...socio, origem_dado: socio.origem_dado || origem });
+            merged.push({ ...socio, nome, cpf_cnpj_socio: documento || socio.cpf_cnpj_socio || "", origem_dado: socio.origem_dado || origem });
           }
           listas.forEach(({ socios, origem }) => {
             (Array.isArray(socios) ? socios : []).forEach((socio) => add(socio, origem));
