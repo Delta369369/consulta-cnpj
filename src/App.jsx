@@ -101,59 +101,38 @@ function smartFormatValue(key, value) {
   const lowerKey = String(key).toLowerCase();
 
   if (typeof value === "boolean") return formatBoolean(value);
-
-  if (lowerKey.includes("cnpj") && onlyDigits(value).length === 14) {
-    return formatCNPJ(value);
-  }
-
-  if ((lowerKey.includes("cpf") || lowerKey.includes("documento")) && onlyDigits(value).length === 11) {
-    return formatCPF(value);
-  }
-
+  if (lowerKey.includes("cnpj") && onlyDigits(value).length === 14) return formatCNPJ(value);
+  if ((lowerKey.includes("cpf") || lowerKey.includes("documento")) && onlyDigits(value).length === 11) return formatCPF(value);
   if (lowerKey.includes("cep")) return formatCEP(value);
 
-  if (
-    lowerKey.includes("data") ||
-    lowerKey.includes("atualizado_em") ||
-    lowerKey.includes("criado_em")
-  ) {
+  if (lowerKey.includes("data") || lowerKey.includes("atualizado_em") || lowerKey.includes("criado_em")) {
     return formatDate(value);
   }
 
   if (lowerKey.includes("capital_social")) return formatCurrencyBRL(value);
-
   return String(value);
 }
 
 function getSituacaoBadgeClass(situacao) {
   const text = String(situacao || "").toLowerCase();
-  if (text.includes("ativa")) return "bg-emerald-100 text-emerald-800 ring-emerald-200";
+  if (text.includes("ativa")) return "border-emerald-400/50 bg-emerald-400/15 text-emerald-100 shadow-emerald-500/20";
   if (text.includes("baixada") || text.includes("inapta") || text.includes("suspensa")) {
-    return "bg-red-100 text-red-800 ring-red-200";
+    return "border-red-400/50 bg-red-400/15 text-red-100 shadow-red-500/20";
   }
-  return "bg-amber-100 text-amber-800 ring-amber-200";
+  return "border-amber-400/50 bg-amber-400/15 text-amber-100 shadow-amber-500/20";
 }
 
 function getValueByPath(obj, path) {
   return path.split(".").reduce((acc, part) => (acc ? acc[part] : undefined), obj);
 }
 
-function SummaryCard({ label, value, highlight = false }) {
-  return (
-    <div className={`rounded-2xl border p-4 shadow-sm ${highlight ? "border-slate-300 bg-slate-900 text-white" : "border-slate-200 bg-white text-slate-900"}`}>
-      <p className={`text-[11px] font-black uppercase tracking-[0.18em] ${highlight ? "text-cyan-200" : "text-slate-500"}`}>{label}</p>
-      <p className="mt-2 break-words text-sm font-bold leading-5">{value || "-"}</p>
-    </div>
-  );
-}
-
 function Section({ eyebrow, title, children, action }) {
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+    <section className="rounded-[1.7rem] border border-cyan-400/10 bg-slate-950/85 p-5 shadow-2xl shadow-black/30 ring-1 ring-white/5 backdrop-blur md:p-6">
       <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
-          {eyebrow && <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">{eyebrow}</p>}
-          <h2 className="mt-1 text-xl font-black text-slate-950">{title}</h2>
+          {eyebrow && <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-300/80">{eyebrow}</p>}
+          <h2 className="mt-1 text-xl font-black text-slate-50">{title}</h2>
         </div>
         {action}
       </div>
@@ -162,10 +141,25 @@ function Section({ eyebrow, title, children, action }) {
   );
 }
 
+function SummaryCard({ label, value, highlight = false }) {
+  return (
+    <div
+      className={`rounded-2xl border p-4 shadow-sm transition ${
+        highlight
+          ? "border-cyan-300/50 bg-cyan-300/10 text-cyan-50 shadow-cyan-500/10"
+          : "border-white/10 bg-white/[0.04] text-slate-100 shadow-black/20"
+      }`}
+    >
+      <p className={`text-[11px] font-black uppercase tracking-[0.18em] ${highlight ? "text-cyan-200" : "text-slate-400"}`}>{label}</p>
+      <p className="mt-2 break-words text-sm font-bold leading-5">{value || "-"}</p>
+    </div>
+  );
+}
+
 function CompactGrid({ items, columns = "lg:grid-cols-3" }) {
   const visibleItems = items.filter((item) => item && isFilled(item.value));
   if (visibleItems.length === 0) {
-    return <p className="rounded-2xl bg-slate-50 p-4 text-sm font-medium text-slate-500">Nenhum dado retornado para esta seção.</p>;
+    return <p className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm font-medium text-slate-300">Nenhum dado retornado para esta seção.</p>;
   }
   return (
     <div className={`grid gap-3 md:grid-cols-2 ${columns}`}>
@@ -178,25 +172,25 @@ function CompactGrid({ items, columns = "lg:grid-cols-3" }) {
 
 function Table({ columns, rows, emptyMessage }) {
   if (!rows || rows.length === 0) {
-    return <p className="rounded-2xl bg-slate-50 p-4 text-sm font-medium text-slate-500">{emptyMessage}</p>;
+    return <p className="rounded-2xl border border-amber-300/20 bg-amber-300/10 p-4 text-sm font-semibold text-amber-100">{emptyMessage}</p>;
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200">
+    <div className="overflow-hidden rounded-2xl border border-cyan-400/10 bg-slate-950/70">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[760px] text-left text-sm">
-          <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-500">
+          <thead className="border-b border-cyan-400/10 bg-cyan-400/10 text-xs uppercase tracking-wide text-cyan-100">
             <tr>
               {columns.map((column) => (
                 <th key={column.key} className="px-4 py-3 font-black">{column.label}</th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200 bg-white">
+          <tbody className="divide-y divide-white/10">
             {rows.map((row, rowIndex) => (
-              <tr key={rowIndex} className="align-top hover:bg-slate-50">
+              <tr key={rowIndex} className="align-top text-slate-200 transition hover:bg-cyan-400/5">
                 {columns.map((column) => (
-                  <td key={column.key} className="px-4 py-3 font-semibold text-slate-800">
+                  <td key={column.key} className="px-4 py-3 font-semibold">
                     {column.render ? column.render(row) : smartFormatValue(column.key, getValueByPath(row, column.key))}
                   </td>
                 ))}
@@ -219,25 +213,22 @@ function getDynamicCardClass({ complex, level, entryCount }) {
   const shouldExpand = complex && (level <= 1 || entryCount > 6);
   const span = shouldExpand ? "md:col-span-2 xl:col-span-3" : "";
   const padding = complex ? "p-4" : "p-3";
-  const background = complex ? "bg-slate-50" : "bg-white";
-  return `rounded-xl border border-slate-200 ${background} ${padding} ${span}`;
+  const background = complex ? "bg-slate-900/70" : "bg-white/[0.04]";
+  return `rounded-xl border border-white/10 ${background} ${padding} ${span}`;
 }
 
 function DataRenderer({ data, name = "dados", level = 0 }) {
-  if (data === null || data === undefined || data === "") return <span className="text-slate-400">-</span>;
+  if (data === null || data === undefined || data === "") return <span className="text-slate-500">-</span>;
 
   if (Array.isArray(data)) {
-    if (data.length === 0) return <span className="text-slate-400">Lista vazia</span>;
-
-    const itemGrid = data.length === 1
-      ? "grid gap-3"
-      : "grid gap-3 md:grid-cols-2 xl:grid-cols-3";
+    if (data.length === 0) return <span className="text-slate-500">Lista vazia</span>;
+    const itemGrid = data.length === 1 ? "grid gap-3" : "grid gap-3 md:grid-cols-2 xl:grid-cols-3";
 
     return (
       <div className={itemGrid}>
         {data.map((item, index) => (
-          <div key={`${name}-${index}`} className="rounded-xl border border-slate-200 bg-white p-3">
-            <div className="mb-2 text-xs font-black uppercase tracking-wide text-slate-500">Item {index + 1}</div>
+          <div key={`${name}-${index}`} className="rounded-xl border border-white/10 bg-slate-950/70 p-3">
+            <div className="mb-2 text-xs font-black uppercase tracking-wide text-cyan-300/75">Item {index + 1}</div>
             <DataRenderer data={item} name={`${name}-${index}`} level={level + 1} />
           </div>
         ))}
@@ -247,7 +238,7 @@ function DataRenderer({ data, name = "dados", level = 0 }) {
 
   if (typeof data === "object") {
     const entries = Object.entries(data);
-    if (entries.length === 0) return <span className="text-slate-400">Objeto vazio</span>;
+    if (entries.length === 0) return <span className="text-slate-500">Objeto vazio</span>;
 
     return (
       <div className={getDynamicGridClass(level)}>
@@ -257,11 +248,11 @@ function DataRenderer({ data, name = "dados", level = 0 }) {
 
           return (
             <div key={`${name}-${key}`} className={getDynamicCardClass({ complex, level, entryCount: childCount })}>
-              <div className="mb-2 text-xs font-black uppercase tracking-wide text-slate-500">{humanizeKey(key)}</div>
+              <div className="mb-2 text-xs font-black uppercase tracking-wide text-cyan-300/75">{humanizeKey(key)}</div>
               {complex ? (
                 <DataRenderer data={value} name={key} level={level + 1} />
               ) : (
-                <div className="break-words text-sm font-semibold leading-5 text-slate-800">{smartFormatValue(key, value)}</div>
+                <div className="break-words text-sm font-semibold leading-5 text-slate-200">{smartFormatValue(key, value)}</div>
               )}
             </div>
           );
@@ -270,7 +261,7 @@ function DataRenderer({ data, name = "dados", level = 0 }) {
     );
   }
 
-  return <span className="break-words text-sm font-semibold text-slate-800">{smartFormatValue(name, data)}</span>;
+  return <span className="break-words text-sm font-semibold text-slate-200">{smartFormatValue(name, data)}</span>;
 }
 
 function normalizeSocioDocument(socio) {
@@ -364,6 +355,64 @@ function buildInvestigativeFlags(data) {
   if (inscricoes.some((ie) => ie.ativo === false)) flags.push("Há inscrição estadual inativa ou baixada.");
 
   return flags;
+}
+
+function FingerprintArt() {
+  return (
+    <svg className="absolute right-4 top-4 hidden h-72 w-72 opacity-20 md:block" viewBox="0 0 300 300" fill="none" aria-hidden="true">
+      <path d="M84 162c0-56 38-94 89-94 48 0 84 33 84 78" stroke="currentColor" strokeWidth="4" className="text-cyan-300" />
+      <path d="M62 146c6-66 52-110 113-110 62 0 108 43 115 103" stroke="currentColor" strokeWidth="3" className="text-cyan-400" />
+      <path d="M99 187c-2-15-4-28-4-40 0-45 31-75 76-75 42 0 72 29 72 70 0 34-8 59-20 89" stroke="currentColor" strokeWidth="4" className="text-cyan-200" />
+      <path d="M117 239c-10-31-16-61-16-92 0-41 28-68 70-68 39 0 65 27 65 65 0 46-13 79-30 112" stroke="currentColor" strokeWidth="3" className="text-cyan-400" />
+      <path d="M137 263c-16-46-25-80-25-118 0-34 24-56 58-56 34 0 57 23 57 56 0 50-18 89-39 122" stroke="currentColor" strokeWidth="3" className="text-cyan-200" />
+      <path d="M157 268c-18-43-31-81-31-123 0-26 18-43 44-43 26 0 43 17 43 43 0 48-21 91-42 122" stroke="currentColor" strokeWidth="4" className="text-cyan-300" />
+      <path d="M176 267c22-35 31-73 31-120 0-22-14-36-36-36-21 0-35 14-35 36 0 37 10 73 28 119" stroke="currentColor" strokeWidth="3" className="text-cyan-100" />
+    </svg>
+  );
+}
+
+function TacticalHero({ filledFields, socios }) {
+  return (
+    <header className="relative overflow-hidden rounded-[2rem] border border-cyan-300/10 bg-[#03140e] px-6 py-8 text-white shadow-2xl shadow-black/50 md:px-10 md:py-10">
+      <div
+        className="absolute inset-0 opacity-40"
+        style={{
+          backgroundImage:
+            "linear-gradient(90deg, rgba(34,211,238,.08) 1px, transparent 1px), linear-gradient(0deg, rgba(34,211,238,.06) 1px, transparent 1px), radial-gradient(circle at 68% 48%, rgba(34,211,238,.22), transparent 23%), radial-gradient(circle at 15% 30%, rgba(16,185,129,.18), transparent 24%)",
+          backgroundSize: "70px 70px, 70px 70px, auto, auto",
+        }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-emerald-950/55 to-black/30" />
+      <div className="absolute -left-16 bottom-0 hidden h-80 w-80 rounded-full border border-cyan-300/10 bg-cyan-300/5 blur-sm md:block" />
+      <FingerprintArt />
+
+      <div className="relative z-10 flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+        <div className="max-w-4xl">
+          <p className="text-sm font-bold text-cyan-200">• by Delta_Victor_DPRC</p>
+          <h1 className="mt-5 text-5xl font-black tracking-tight text-violet-300 drop-shadow md:text-7xl lg:text-8xl">OSINT – CNPJ</h1>
+          <div className="mt-5 h-1 w-full max-w-xl bg-cyan-300 shadow-lg shadow-cyan-400/40" />
+          <div className="mt-4 h-1 w-full max-w-xl bg-cyan-300 shadow-lg shadow-cyan-400/40" />
+          <p className="mt-7 text-3xl font-black leading-tight text-cyan-100 md:text-4xl">Não seja um investigador que não investiga.</p>
+          <p className="mt-3 max-w-3xl text-lg font-bold leading-7 text-cyan-50/90 md:text-2xl">Ferramenta para auxiliar profissionais da Lei desamparados.</p>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[420px] lg:grid-cols-1 xl:grid-cols-3">
+          <div className="rounded-2xl border border-cyan-300/20 bg-black/30 p-4 shadow-lg shadow-cyan-950/40 backdrop-blur">
+            <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-300">Status</p>
+            <p className="mt-2 text-sm font-black text-emerald-200">Operacional</p>
+          </div>
+          <div className="rounded-2xl border border-cyan-300/20 bg-black/30 p-4 shadow-lg shadow-cyan-950/40 backdrop-blur">
+            <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-300">Campos</p>
+            <p className="mt-1 text-3xl font-black text-white">{filledFields}</p>
+          </div>
+          <div className="rounded-2xl border border-cyan-300/20 bg-black/30 p-4 shadow-lg shadow-cyan-950/40 backdrop-blur">
+            <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-300">QSA</p>
+            <p className="mt-1 text-3xl font-black text-white">{socios.length}</p>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
 }
 
 export default function App() {
@@ -486,233 +535,225 @@ export default function App() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 px-4 py-8 text-slate-900">
-      <section className="mx-auto max-w-7xl">
-        <div className="overflow-hidden rounded-[2rem] bg-slate-100 shadow-2xl ring-1 ring-white/10">
-          <header className="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 px-6 py-8 text-white md:px-10">
-            <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-              <div>
-                <p className="text-sm font-bold uppercase tracking-[0.25em] text-cyan-300">Consulta pública CNPJ.ws + ReceitaWS</p>
-                <h1 className="mt-3 text-3xl font-black tracking-tight md:text-5xl">Consulta CNPJ Investigativa</h1>
-                <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300 md:text-base">
-                  Consulta cadastral com resumo compacto, QSA consolidado, responsáveis, atividades, inscrições, indicadores e renderização integral dos JSONs retornados pelas fontes públicas.
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-3 text-center md:min-w-[300px]">
-                <div className="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/15">
-                  <p className="text-xs uppercase tracking-wide text-slate-300">Campos</p>
-                  <p className="mt-1 text-3xl font-black">{filledFields}</p>
-                </div>
-                <div className="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/15">
-                  <p className="text-xs uppercase tracking-wide text-slate-300">QSA</p>
-                  <p className="mt-1 text-3xl font-black">{socios.length}</p>
-                </div>
-              </div>
+    <main className="min-h-screen bg-[#020807] px-4 py-6 text-slate-100 md:py-8">
+      <div
+        className="fixed inset-0 -z-10 opacity-80"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 20% 20%, rgba(34,211,238,.12), transparent 26%), radial-gradient(circle at 85% 0%, rgba(124,58,237,.14), transparent 28%), linear-gradient(135deg, rgba(8,47,73,.45), transparent 45%), linear-gradient(90deg, rgba(34,211,238,.04) 1px, transparent 1px), linear-gradient(0deg, rgba(34,211,238,.035) 1px, transparent 1px)",
+          backgroundSize: "auto, auto, auto, 58px 58px, 58px 58px",
+        }}
+      />
+
+      <section className="mx-auto max-w-7xl space-y-6">
+        <TacticalHero filledFields={filledFields} socios={socios} />
+
+        <form onSubmit={handleSubmit} className="rounded-[1.7rem] border border-cyan-400/15 bg-slate-950/90 p-4 shadow-2xl shadow-black/40 ring-1 ring-white/5 backdrop-blur md:p-5">
+          <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Módulo de consulta</p>
+              <label className="mt-1 block text-lg font-black text-white">CNPJ</label>
             </div>
-          </header>
-
-          <div className="px-6 py-6 md:px-10">
-            <form onSubmit={handleSubmit} className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
-              <label className="mb-2 block text-sm font-bold text-slate-700">CNPJ</label>
-              <div className="flex flex-col gap-3 md:flex-row">
-                <input
-                  value={cnpj}
-                  onChange={(event) => setCnpj(maskCNPJInput(event.target.value))}
-                  placeholder="00.000.000/0000-00"
-                  className="h-12 flex-1 rounded-2xl border border-slate-300 bg-slate-50 px-4 text-lg font-semibold outline-none transition focus:border-cyan-500 focus:bg-white focus:ring-4 focus:ring-cyan-100"
-                  inputMode="numeric"
-                  maxLength={18}
-                />
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="h-12 rounded-2xl bg-cyan-600 px-6 font-bold text-white shadow-lg shadow-cyan-600/20 transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:bg-slate-400"
-                >
-                  {loading ? "Consultando..." : "Consultar"}
-                </button>
-              </div>
-              <p className="mt-2 text-xs font-medium text-slate-500">A consulta usa apenas os 14 números do CNPJ. Não insira dados de investigação no GitHub.</p>
-              {error && <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</div>}
-            </form>
-
-            {loading && (
-              <div className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div className="h-4 w-48 animate-pulse rounded bg-slate-200" />
-                <div className="mt-4 grid gap-4 md:grid-cols-3">
-                  <div className="h-24 animate-pulse rounded-2xl bg-slate-200" />
-                  <div className="h-24 animate-pulse rounded-2xl bg-slate-200" />
-                  <div className="h-24 animate-pulse rounded-2xl bg-slate-200" />
-                </div>
-              </div>
-            )}
-
-            {data && !loading && (
-              <div className="mt-6 space-y-6">
-                <Section eyebrow="Resumo principal" title="Resumo da empresa">
-                  <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                    <div>
-                      <h2 className="text-2xl font-black text-slate-950">{data.razao_social || "-"}</h2>
-                      <p className="mt-1 text-sm font-semibold text-slate-500">{formatCNPJ(fullCnpj || cnpj)}</p>
-                    </div>
-                    <span className={`inline-flex w-fit rounded-full px-4 py-2 text-sm font-black ring-1 ${getSituacaoBadgeClass(estabelecimento.situacao_cadastral)}`}>
-                      {estabelecimento.situacao_cadastral || "Situação não informada"}
-                    </span>
-                  </div>
-
-                  <CompactGrid
-                    items={[
-                      { label: "Razão social", value: data.razao_social, highlight: true },
-                      { label: "Nome fantasia", value: estabelecimento.nome_fantasia },
-                      { label: "CNPJ", value: formatCNPJ(fullCnpj || cnpj) },
-                      { label: "Capital social", value: formatCurrencyBRL(data.capital_social) },
-                      { label: "Porte", value: data.porte?.descricao },
-                      { label: "Natureza jurídica", value: data.natureza_juridica?.descricao },
-                      { label: "Situação cadastral", value: estabelecimento.situacao_cadastral },
-                      { label: "Data situação", value: formatDate(estabelecimento.data_situacao_cadastral) },
-                      { label: "Motivo situação", value: estabelecimento.motivo_situacao_cadastral },
-                      { label: "Cidade/UF", value: [cidade, uf].filter(Boolean).join(" / ") },
-                      { label: "Endereço", value: endereco },
-                      { label: "Telefone", value: telefones },
-                      { label: "E-mail", value: estabelecimento.email },
-                      { label: "Atualizado em", value: formatDate(data.atualizado_em || estabelecimento.atualizado_em) },
-                    ]}
-                  />
-                </Section>
-
-                <Section eyebrow="Responsáveis e vínculos" title="Responsável, qualificação e QSA">
-                  <CompactGrid
-                    columns="lg:grid-cols-2"
-                    items={[
-                      { label: "Responsável federativo", value: data.responsavel_federativo || "Não informado" },
-                      { label: "Qualificação do responsável", value: data.qualificacao_do_responsavel?.descricao || data.qualificacao_do_responsavel },
-                      { label: "Total de sócios/QSA", value: socios.length ? String(socios.length) : "0" },
-                      { label: "QSA via CNPJ.ws", value: String(data?.fontes_adicionais?.cnpjws?.total_qsa ?? 0) },
-                      { label: "QSA via ReceitaWS", value: String(receitaWsInfo?.total_qsa ?? 0) },
-                      { label: "Status ReceitaWS", value: receitaWsInfo?.sucesso ? "Consultada com sucesso" : receitaWsInfo?.erro || "Não consultada" },
-                      { label: "CNPJ raiz", value: data.cnpj_raiz },
-                    ]}
-                  />
-
-                  <div className="mt-4">
-                    <Table
-                      emptyMessage="Nenhum sócio/QSA retornado pelas fontes públicas consultadas para este CNPJ."
-                      rows={socios}
-                      columns={[
-                        { key: "nome", label: "Nome / Razão social", render: (row) => row.nome || "-" },
-                        { key: "documento", label: "CPF/CNPJ", render: (row) => normalizeSocioDocument(row) },
-                        { key: "tipo", label: "Tipo", render: (row) => row.tipo || "-" },
-                        { key: "qualificacao_socio.descricao", label: "Qualificação", render: (row) => row.qualificacao_socio?.descricao || "-" },
-                        { key: "data_entrada", label: "Entrada", render: (row) => formatDate(row.data_entrada) },
-                        { key: "representante", label: "Representante legal", render: (row) => [row.nome_representante, smartFormatValue("cpf_representante_legal", row.cpf_representante_legal)].filter((v) => v && v !== "-").join(" - ") || "-" },
-                        { key: "pais.nome", label: "País", render: (row) => row.pais?.nome || "-" },
-                        { key: "origem_dado", label: "Fonte", render: (row) => row.origem_dado || "CNPJ.ws" },
-                      ]}
-                    />
-                  </div>
-                </Section>
-
-                <Section eyebrow="Atividades econômicas" title="CNAE principal e atividades secundárias">
-                  <CompactGrid
-                    columns="lg:grid-cols-2"
-                    items={[
-                      { label: "CNAE principal", value: [atividadePrincipal.id, atividadePrincipal.descricao].filter(Boolean).join(" - "), highlight: true },
-                      { label: "Quantidade de secundárias", value: atividadesSecundarias.length ? String(atividadesSecundarias.length) : "0" },
-                    ]}
-                  />
-
-                  <div className="mt-4">
-                    <Table
-                      emptyMessage="Nenhuma atividade secundária retornada."
-                      rows={atividadesSecundarias}
-                      columns={[
-                        { key: "id", label: "Código" },
-                        { key: "descricao", label: "Descrição" },
-                      ]}
-                    />
-                  </div>
-                </Section>
-
-                <Section eyebrow="Regimes e cadastros" title="Simples, MEI, inscrições estaduais e Suframa">
-                  <CompactGrid
-                    items={[
-                      { label: "Optante Simples", value: formatBoolean(simples.simples) },
-                      { label: "Data opção Simples", value: formatDate(simples.data_opcao_simples) },
-                      { label: "Data exclusão Simples", value: formatDate(simples.data_exclusao_simples) },
-                      { label: "MEI", value: formatBoolean(simples.mei) },
-                      { label: "Data opção MEI", value: formatDate(simples.data_opcao_mei) },
-                      { label: "Data exclusão MEI", value: formatDate(simples.data_exclusao_mei) },
-                    ]}
-                  />
-
-                  <div className="mt-4 grid gap-4 xl:grid-cols-2">
-                    <Table
-                      emptyMessage="Nenhuma inscrição estadual retornada."
-                      rows={inscricoes}
-                      columns={[
-                        { key: "inscricao_estadual", label: "Inscrição" },
-                        { key: "ativo", label: "Ativo", render: (row) => formatBoolean(row.ativo) },
-                        { key: "estado.sigla", label: "UF", render: (row) => row.estado?.sigla || "-" },
-                        { key: "atualizado_em", label: "Atualizado", render: (row) => formatDate(row.atualizado_em) },
-                      ]}
-                    />
-
-                    <Table
-                      emptyMessage="Nenhum registro Suframa retornado."
-                      rows={Array.isArray(suframa) ? suframa : []}
-                      columns={[
-                        { key: "numero", label: "Número" },
-                        { key: "inscricao", label: "Inscrição" },
-                        { key: "ativo", label: "Ativo", render: (row) => formatBoolean(row.ativo) },
-                        { key: "atualizado_em", label: "Atualizado", render: (row) => formatDate(row.atualizado_em) },
-                      ]}
-                    />
-                  </div>
-                </Section>
-
-                <Section eyebrow="Apoio à análise" title="Indicadores rápidos">
-                  {flags.length > 0 ? (
-                    <div className="grid gap-3 md:grid-cols-2">
-                      {flags.map((flag) => (
-                        <div key={flag} className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900">{flag}</div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-900">Nenhum indicador automático relevante foi identificado nos campos retornados.</p>
-                  )}
-                </Section>
-
-                <Section
-                  eyebrow="Conferência integral"
-                  title="Todos os dados retornados pela API"
-                  action={
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setRawVisible((current) => !current)}
-                        className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-100"
-                      >
-                        {rawVisible ? "Ocultar JSON bruto" : "Ver JSON bruto"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={copyJson}
-                        className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white transition hover:bg-slate-700"
-                      >
-                        {copied ? "JSON copiado" : "Copiar JSON"}
-                      </button>
-                    </div>
-                  }
-                >
-                  {rawVisible ? (
-                    <pre className="max-h-[620px] overflow-auto rounded-2xl bg-slate-950 p-4 text-xs leading-6 text-cyan-100">{JSON.stringify(data, null, 2)}</pre>
-                  ) : (
-                    <DataRenderer data={data} />
-                  )}
-                </Section>
-              </div>
-            )}
+            <p className="text-xs font-medium text-slate-400">Consulta via fontes públicas. Use apenas para finalidade legítima.</p>
           </div>
-        </div>
+
+          <div className="flex flex-col gap-3 md:flex-row">
+            <input
+              value={cnpj}
+              onChange={(event) => setCnpj(maskCNPJInput(event.target.value))}
+              placeholder="00.000.000/0000-00"
+              className="h-13 flex-1 rounded-2xl border border-cyan-300/20 bg-black/40 px-4 py-3 text-lg font-black tracking-wide text-cyan-50 outline-none transition placeholder:text-slate-600 focus:border-cyan-300 focus:ring-4 focus:ring-cyan-400/10"
+              inputMode="numeric"
+              maxLength={18}
+            />
+            <button
+              type="submit"
+              disabled={loading}
+              className="rounded-2xl border border-cyan-300/30 bg-cyan-400 px-7 py-3 font-black uppercase tracking-[0.18em] text-slate-950 shadow-lg shadow-cyan-500/20 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:border-slate-600 disabled:bg-slate-700 disabled:text-slate-400"
+            >
+              {loading ? "Consultando..." : "Consultar"}
+            </button>
+          </div>
+
+          {error && <div className="mt-4 rounded-2xl border border-red-300/30 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-100">{error}</div>}
+        </form>
+
+        {loading && (
+          <div className="rounded-[1.7rem] border border-cyan-400/10 bg-slate-950/85 p-6 shadow-2xl shadow-black/30">
+            <div className="h-4 w-48 animate-pulse rounded bg-cyan-300/20" />
+            <div className="mt-4 grid gap-4 md:grid-cols-3">
+              <div className="h-24 animate-pulse rounded-2xl bg-cyan-300/10" />
+              <div className="h-24 animate-pulse rounded-2xl bg-cyan-300/10" />
+              <div className="h-24 animate-pulse rounded-2xl bg-cyan-300/10" />
+            </div>
+          </div>
+        )}
+
+        {data && !loading && (
+          <div className="space-y-6">
+            <Section eyebrow="Resumo principal" title="Resumo da empresa">
+              <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <h2 className="text-2xl font-black text-white">{data.razao_social || "-"}</h2>
+                  <p className="mt-1 text-sm font-semibold text-cyan-200/80">{formatCNPJ(fullCnpj || cnpj)}</p>
+                </div>
+                <span className={`inline-flex w-fit rounded-full border px-4 py-2 text-sm font-black shadow-lg ${getSituacaoBadgeClass(estabelecimento.situacao_cadastral)}`}>
+                  {estabelecimento.situacao_cadastral || "Situação não informada"}
+                </span>
+              </div>
+
+              <CompactGrid
+                items={[
+                  { label: "Razão social", value: data.razao_social, highlight: true },
+                  { label: "Nome fantasia", value: estabelecimento.nome_fantasia },
+                  { label: "CNPJ", value: formatCNPJ(fullCnpj || cnpj) },
+                  { label: "Capital social", value: formatCurrencyBRL(data.capital_social) },
+                  { label: "Porte", value: data.porte?.descricao },
+                  { label: "Natureza jurídica", value: data.natureza_juridica?.descricao },
+                  { label: "Situação cadastral", value: estabelecimento.situacao_cadastral },
+                  { label: "Data situação", value: formatDate(estabelecimento.data_situacao_cadastral) },
+                  { label: "Motivo situação", value: estabelecimento.motivo_situacao_cadastral },
+                  { label: "Cidade/UF", value: [cidade, uf].filter(Boolean).join(" / ") },
+                  { label: "Endereço", value: endereco },
+                  { label: "Telefone", value: telefones },
+                  { label: "E-mail", value: estabelecimento.email },
+                  { label: "Atualizado em", value: formatDate(data.atualizado_em || estabelecimento.atualizado_em) },
+                ]}
+              />
+            </Section>
+
+            <Section eyebrow="Responsáveis e vínculos" title="Responsável, qualificação e QSA">
+              <CompactGrid
+                columns="lg:grid-cols-2"
+                items={[
+                  { label: "Responsável federativo", value: data.responsavel_federativo || "Não informado" },
+                  { label: "Qualificação do responsável", value: data.qualificacao_do_responsavel?.descricao || data.qualificacao_do_responsavel },
+                  { label: "Total de sócios/QSA", value: socios.length ? String(socios.length) : "0" },
+                  { label: "QSA via CNPJ.ws", value: String(data?.fontes_adicionais?.cnpjws?.total_qsa ?? 0) },
+                  { label: "QSA via ReceitaWS", value: String(receitaWsInfo?.total_qsa ?? 0) },
+                  { label: "Status ReceitaWS", value: receitaWsInfo?.sucesso ? "Consultada com sucesso" : receitaWsInfo?.erro || "Não consultada" },
+                  { label: "CNPJ raiz", value: data.cnpj_raiz },
+                ]}
+              />
+
+              <div className="mt-4">
+                <Table
+                  emptyMessage="Nenhum sócio/QSA retornado pelas fontes públicas consultadas para este CNPJ."
+                  rows={socios}
+                  columns={[
+                    { key: "nome", label: "Nome / Razão social", render: (row) => row.nome || "-" },
+                    { key: "documento", label: "CPF/CNPJ", render: (row) => normalizeSocioDocument(row) },
+                    { key: "tipo", label: "Tipo", render: (row) => row.tipo || "-" },
+                    { key: "qualificacao_socio.descricao", label: "Qualificação", render: (row) => row.qualificacao_socio?.descricao || "-" },
+                    { key: "data_entrada", label: "Entrada", render: (row) => formatDate(row.data_entrada) },
+                    { key: "representante", label: "Representante legal", render: (row) => [row.nome_representante, smartFormatValue("cpf_representante_legal", row.cpf_representante_legal)].filter((v) => v && v !== "-").join(" - ") || "-" },
+                    { key: "pais.nome", label: "País", render: (row) => row.pais?.nome || "-" },
+                    { key: "origem_dado", label: "Fonte", render: (row) => row.origem_dado || "CNPJ.ws" },
+                  ]}
+                />
+              </div>
+            </Section>
+
+            <Section eyebrow="Atividades econômicas" title="CNAE principal e atividades secundárias">
+              <CompactGrid
+                columns="lg:grid-cols-2"
+                items={[
+                  { label: "CNAE principal", value: [atividadePrincipal.id, atividadePrincipal.descricao].filter(Boolean).join(" - "), highlight: true },
+                  { label: "Quantidade de secundárias", value: atividadesSecundarias.length ? String(atividadesSecundarias.length) : "0" },
+                ]}
+              />
+
+              <div className="mt-4">
+                <Table
+                  emptyMessage="Nenhuma atividade secundária retornada."
+                  rows={atividadesSecundarias}
+                  columns={[
+                    { key: "id", label: "Código" },
+                    { key: "descricao", label: "Descrição" },
+                  ]}
+                />
+              </div>
+            </Section>
+
+            <Section eyebrow="Regimes e cadastros" title="Simples, MEI, inscrições estaduais e Suframa">
+              <CompactGrid
+                items={[
+                  { label: "Optante Simples", value: formatBoolean(simples.simples) },
+                  { label: "Data opção Simples", value: formatDate(simples.data_opcao_simples) },
+                  { label: "Data exclusão Simples", value: formatDate(simples.data_exclusao_simples) },
+                  { label: "MEI", value: formatBoolean(simples.mei) },
+                  { label: "Data opção MEI", value: formatDate(simples.data_opcao_mei) },
+                  { label: "Data exclusão MEI", value: formatDate(simples.data_exclusao_mei) },
+                ]}
+              />
+
+              <div className="mt-4 grid gap-4 xl:grid-cols-2">
+                <Table
+                  emptyMessage="Nenhuma inscrição estadual retornada."
+                  rows={inscricoes}
+                  columns={[
+                    { key: "inscricao_estadual", label: "Inscrição" },
+                    { key: "ativo", label: "Ativo", render: (row) => formatBoolean(row.ativo) },
+                    { key: "estado.sigla", label: "UF", render: (row) => row.estado?.sigla || "-" },
+                    { key: "atualizado_em", label: "Atualizado", render: (row) => formatDate(row.atualizado_em) },
+                  ]}
+                />
+
+                <Table
+                  emptyMessage="Nenhum registro Suframa retornado."
+                  rows={Array.isArray(suframa) ? suframa : []}
+                  columns={[
+                    { key: "numero", label: "Número" },
+                    { key: "inscricao", label: "Inscrição" },
+                    { key: "ativo", label: "Ativo", render: (row) => formatBoolean(row.ativo) },
+                    { key: "atualizado_em", label: "Atualizado", render: (row) => formatDate(row.atualizado_em) },
+                  ]}
+                />
+              </div>
+            </Section>
+
+            <Section eyebrow="Apoio à análise" title="Indicadores rápidos">
+              {flags.length > 0 ? (
+                <div className="grid gap-3 md:grid-cols-2">
+                  {flags.map((flag) => (
+                    <div key={flag} className="rounded-2xl border border-amber-300/25 bg-amber-300/10 p-4 text-sm font-bold text-amber-100">{flag}</div>
+                  ))}
+                </div>
+              ) : (
+                <p className="rounded-2xl border border-emerald-300/25 bg-emerald-300/10 p-4 text-sm font-bold text-emerald-100">Nenhum indicador automático relevante foi identificado nos campos retornados.</p>
+              )}
+            </Section>
+
+            <Section
+              eyebrow="Conferência integral"
+              title="Todos os dados retornados pela API"
+              action={
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRawVisible((current) => !current)}
+                    className="rounded-xl border border-cyan-300/25 bg-cyan-300/10 px-4 py-2 text-sm font-bold text-cyan-100 transition hover:bg-cyan-300/20"
+                  >
+                    {rawVisible ? "Ocultar JSON bruto" : "Ver JSON bruto"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={copyJson}
+                    className="rounded-xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-bold text-white transition hover:bg-white/20"
+                  >
+                    {copied ? "JSON copiado" : "Copiar JSON"}
+                  </button>
+                </div>
+              }
+            >
+              {rawVisible ? (
+                <pre className="max-h-[620px] overflow-auto rounded-2xl border border-cyan-300/10 bg-black/70 p-4 text-xs leading-6 text-cyan-100">{JSON.stringify(data, null, 2)}</pre>
+              ) : (
+                <DataRenderer data={data} />
+              )}
+            </Section>
+          </div>
+        )}
       </section>
     </main>
   );
