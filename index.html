@@ -10,6 +10,26 @@
 
     <script>
       (() => {
+        const TARGET_TEXT = "Não seja um investigador que não investiga.";
+
+        function removeTargetText() {
+          document.querySelectorAll("p").forEach((element) => {
+            if (element.textContent.trim() === TARGET_TEXT) {
+              element.remove();
+            }
+          });
+        }
+
+        const root = document.getElementById("root");
+        const observer = new MutationObserver(removeTargetText);
+        observer.observe(root, { childList: true, subtree: true });
+        window.addEventListener("load", removeTargetText);
+        setTimeout(removeTargetText, 100);
+      })();
+    </script>
+
+    <script>
+      (() => {
         const originalFetch = window.fetch.bind(window);
         const CNPJWS_HOST = "publica.cnpj.ws/cnpj/";
         const CNPJA_OPEN_BASE = "https://open.cnpja.com/office/";
