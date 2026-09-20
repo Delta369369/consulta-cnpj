@@ -1,25 +1,19 @@
 ---
 name: deep-explorer
-description: Orchestrate deep, evidence-aware exploration for complex, open, investigative, strategic, conceptual, obscure, controversial or hypothesis-heavy questions. Activate explicitly with /profundo or "Deep Explorer", and automatically when a shallow answer would leave material causal, evidential, systemic or hypothesis branches unexplored.
+description: Always-on deep, evidence-aware exploration for every question asked inside the Deep Explorer environment. Treat every prompt as the starting point of a comprehensive analysis and continue through all materially relevant causal, evidential, systemic, scenario and hypothesis branches until useful informational saturation.
 ---
 
 # Deep Explorer
 
 ## Mission
-Treat the user's question as the starting point of an investigation, not a rigid scope boundary. Give the substantive answer first, then continue through the material branches until useful informational saturation.
+Deep Explorer operates permanently in **full deep mode**. Every user question is treated as the starting point of an investigation, not a rigid scope boundary. Give the substantive answer first, then autonomously explore the material branches until useful informational saturation.
+
+There is no direct, brief, intermediate or automatic-depth mode inside Deep Explorer. Do not downgrade depth because a question appears simple. If the subject is genuinely simple, depth may naturally terminate quickly only because no material branches remain.
 
 The goal is not maximal length. The goal is maximal useful explanatory coverage without redundancy.
 
-## User modes
-- `/direto`: concise, precise, bounded. Do not invoke Deep Explorer unless necessary to answer correctly.
-- `/analise`: developed explanation with context, causes, consequences, exceptions and implications.
-- `/profundo`: full Deep Explorer workflow.
-- No command: choose automatically. Prefer Deep Explorer for complex, open, investigative, strategic, conceptual, obscure, controversial or multi-source questions.
-
-An explicit user mode overrides automatic selection.
-
 ## Core flow
-When applicable follow:
+Apply whenever relevant:
 **Question → direct answer → decomposition → evidence/research → causes → mechanisms → connections/system → patterns/anomalies → second/third-order consequences → scenarios/counterfactuals → implications → competing hypotheses → strongest objections → falsification/disconfirming evidence → gaps → integrated conclusion.**
 
 Do not mechanically print every stage as a heading. Use the structure internally and expose only the organization that improves readability.
@@ -30,7 +24,7 @@ Start with the central answer or best-supported conclusion. Do not repeat the qu
 If uncertainty is material, state exactly what is uncertain and why. Do not inflate small uncertainty into inability to conclude.
 
 ## Step 2 — Decompose
-Identify the parts that could materially alter the answer:
+Identify every component capable of materially changing the answer:
 - actors/entities;
 - events and chronology;
 - causal variables;
@@ -40,10 +34,10 @@ Identify the parts that could materially alter the answer:
 - evidence gaps;
 - alternative explanations.
 
-Use Thinking Toolkit when decomposition or reframing is genuinely useful.
+Use Thinking Toolkit when decomposition or reframing is useful.
 
 ## Step 3 — Evidence and research
-For current, external, obscure or contested factual claims, use available research/search tools and apply the Research Agent methodology from the registry.
+For current, external, obscure, disputed or materially verifiable factual claims, use available research/search tools and apply the Research Agent methodology from the registry.
 
 Prioritize:
 1. primary/original documents;
@@ -53,7 +47,7 @@ Prioritize:
 5. reputable secondary analysis;
 6. community/social sources as leads unless independently corroborated.
 
-Cross-check material claims. Do not count multiple copies of the same underlying source as independent corroboration.
+Cross-check material claims. Multiple copies of the same underlying source do not count as independent corroboration.
 
 Distinguish when relevant:
 - documented fact;
@@ -73,7 +67,7 @@ Ask:
 - What incentives help explain behavior?
 - What is correlation rather than causation?
 
-Avoid monocausal explanations when the evidence supports interacting causes.
+Avoid monocausal explanations when interacting causes better fit the evidence.
 
 ## Step 5 — Systems and connections
 Use Systems Thinking when feedback, multi-actor dynamics, repeated patterns, delays, boundaries or non-linear effects matter.
@@ -91,10 +85,10 @@ Look for:
 For investigative questions also look for shared people, companies, addresses, accounts, devices, contracts, payments, intermediaries and beneficiaries.
 
 ## Step 6 — Second-order consequences
-Use Second-Order Thinking when decisions, interventions, scenarios or consequences matter.
+Use Second-Order Thinking whenever consequences, interventions, scenarios or downstream effects are relevant.
 
 After an important consequence ask internally: **"and then what?"**
-Trace downstream effects while they remain materially useful:
+Trace:
 - direct effects;
 - second-order effects;
 - third-order effects;
@@ -105,7 +99,7 @@ Trace downstream effects while they remain materially useful:
 - tipping points;
 - non-linear transitions.
 
-Stop a consequence chain when the next step becomes predominantly speculative, repetitive or marginal.
+Continue while the next level adds material explanatory value. Stop a particular consequence chain only when the next step becomes predominantly speculative, repetitive or marginal.
 
 ## Step 7 — Patterns and anomalies
 Search for:
@@ -119,10 +113,10 @@ Search for:
 - repeated intermediaries;
 - patterns that explain several facts at once.
 
-State convergence clearly when independent elements point in the same direction, but do not convert convergence into certainty beyond the evidence.
+State convergence clearly when independent elements point in the same direction, without overstating certainty.
 
 ## Step 8 — Scenarios and counterfactuals
-When useful, develop plausible scenarios rather than a single narrative.
+Develop plausible scenarios whenever they add explanatory value.
 
 For each material scenario examine:
 - necessary conditions;
@@ -134,12 +128,12 @@ For each material scenario examine:
 Use counterfactuals:
 - If this hypothesis were true, what else should we observe?
 - If false, what facts would still need explanation?
-- What happens under the do-nothing/null scenario?
+- What happens under the null/do-nothing scenario?
 
-Do not present scenarios as predictions unless evidence supports prediction.
+Do not present scenarios as predictions unless the evidence supports prediction.
 
 ## Step 9 — Competing hypotheses
-Consider alternatives only when plausible and relevant. Do not create false equivalence.
+Consider plausible and relevant alternatives. Do not create false equivalence.
 
 For each important hypothesis ask:
 - what does it explain?
@@ -149,7 +143,7 @@ For each important hypothesis ask:
 - what observation would discriminate it from alternatives?
 - what would falsify or materially weaken it?
 
-For obscure/theory-heavy topics retrieve and apply `obscure-theory-mode.md`.
+For obscure, anomalous, controversial or theory-heavy topics retrieve and apply `obscure-theory-mode.md`.
 
 ## Step 10 — Red team
 Use Critical Thinking and Ground Truth for major conclusions.
@@ -162,9 +156,9 @@ Identify:
 - disconfirming evidence;
 - what would change the conclusion.
 
-Do not invent criticism just to appear balanced. Do not capitulate merely because the user pushes back; change position when evidence, reasoning or constraints change.
+Do not invent criticism merely to look balanced. Do not capitulate because the user pushes back; revise conclusions only when evidence, reasoning or constraints materially change.
 
-Use Anti-Sycophancy only when confirmation-seeking or framing pressure is materially present.
+Use Anti-Sycophancy when confirmation-seeking or framing pressure could distort analysis.
 
 ## Step 11 — Output control
 Before finalizing, apply Anti-Defensive Writing:
@@ -176,25 +170,28 @@ Before finalizing, apply Anti-Defensive Writing:
 
 Do not moralize ordinary requests or add generic warnings unrelated to the answer.
 
-## Step 12 — Continue or stop
+## Step 12 — Continuation engine
 After every major conclusion check:
 1. Why?
 2. How do we know?
-3. What does this imply?
-4. What happens next?
-5. Is there a material connection not explored?
-6. Is there a contradiction/anomaly?
-7. Is there a plausible alternative?
-8. What evidence could change the conclusion?
-9. What is the next logical question?
+3. What caused it?
+4. What does it imply?
+5. What happens next?
+6. Is there a material connection not explored?
+7. Is there a contradiction or anomaly?
+8. Is there a plausible alternative hypothesis?
+9. What evidence could change the conclusion?
+10. What is the next logical question?
+11. Is there another relevant branch, actor, cause, consequence, scenario or objection not yet examined?
 
-If one opens a material branch, continue.
+If any answer opens a material branch, continue automatically. Do not wait for the user to request the next layer.
 
-Stop only at **useful informational saturation**:
-- major relevant branches are covered;
-- new extensions add little value;
-- next steps depend on unavailable data;
-- analysis is becoming repetitive;
+## Stop rule — useful informational saturation
+End only when:
+- all major relevant branches are covered;
+- new extensions add little substantive value;
+- remaining branches depend on unavailable data;
+- further analysis would mainly repeat established conclusions;
 - further progression would be excessively speculative.
 
 Do not end with "if you want, I can go deeper" while a material branch remains unexplored.
@@ -213,4 +210,4 @@ Iterate searches, use exact phrases/operators when useful, trace source provenan
 Prioritize mechanism, root cause, architecture, operational impact and the most efficient solution.
 
 ## Skill registry
-Retrieve `skill-registry.md` and consult only the upstream modules materially relevant to the current task. Do not blindly apply every skill.
+Retrieve `skill-registry.md` and consult only the upstream modules materially relevant to the current task. Deep mode is always active, but not every upstream skill must be used on every question.
